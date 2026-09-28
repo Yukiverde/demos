@@ -4,7 +4,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Classic Pong</title>
+
+  <title>Extreme Pong</title>
 
   <style>
     * {
@@ -16,24 +17,28 @@
       background: #000;
       color: white;
       font-family: Arial, sans-serif;
+
       display: flex;
       justify-content: center;
       align-items: center;
+
       min-height: 100vh;
     }
 
     .game-container {
-      width: 90vw;
-      max-width: 900px;
+      width: 92vw;
+      max-width: 1000px;
       text-align: center;
     }
 
     h1 {
-      margin-bottom: 8px;
+      margin: 0 0 5px;
+      font-size: 30px;
+      letter-spacing: 2px;
     }
 
     .instructions {
-      color: #aaa;
+      color: #888;
       font-size: 14px;
       margin-bottom: 15px;
     }
@@ -42,26 +47,35 @@
       width: 100%;
       height: auto;
       display: block;
-      background: black;
+
+      background: #000;
+
       border: 2px solid white;
     }
 
     .score {
       display: flex;
       justify-content: space-around;
-      font-size: 32px;
-      margin-top: 15px;
+
+      font-size: 36px;
+      font-weight: bold;
+
+      margin-top: 12px;
     }
 
-    #mode {
-      margin-top: 10px;
+    #difficulty {
+      margin-top: 5px;
       color: #aaa;
+      font-size: 14px;
     }
 
     #message {
-      margin-top: 15px;
+      margin-top: 12px;
+
       font-size: 22px;
       font-weight: bold;
+
+      min-height: 28px;
     }
   </style>
 </head>
@@ -70,23 +84,26 @@
 
   <div class="game-container">
 
-    <h1>Classic Pong</h1>
+    <h1>EXTREME PONG</h1>
 
     <div class="instructions">
-      W / S = Move &nbsp; | &nbsp;
-      1 = Classic Mode &nbsp; | &nbsp;
-      2 = Fast Mode &nbsp; | &nbsp;
-      Space = Restart
+      W / S = Move &nbsp; | &nbsp; Space = Restart
     </div>
 
-    <canvas id="gameCanvas" width="900" height="500"></canvas>
+    <canvas
+      id="gameCanvas"
+      width="1000"
+      height="550">
+    </canvas>
 
     <div class="score">
       <span id="playerScore">0</span>
       <span id="aiScore">0</span>
     </div>
 
-    <div id="mode">Mode: Classic</div>
+    <div id="difficulty">
+      ⚡ EXTREME FAST MODE
+    </div>
 
     <div id="message"></div>
 
@@ -95,129 +112,152 @@
 
   <script>
 
-    // Get the canvas
+    // =========================================
+    // CANVAS
+    // =========================================
+
     const canvas = document.getElementById("gameCanvas");
+
     const ctx = canvas.getContext("2d");
 
-    // Get HTML elements
-    const playerScoreElement = document.getElementById("playerScore");
-    const aiScoreElement = document.getElementById("aiScore");
-    const messageElement = document.getElementById("message");
-    const modeElement = document.getElementById("mode");
+
+    // =========================================
+    // HTML ELEMENTS
+    // =========================================
+
+    const playerScoreElement =
+      document.getElementById("playerScore");
+
+    const aiScoreElement =
+      document.getElementById("aiScore");
+
+    const messageElement =
+      document.getElementById("message");
 
 
-    // -------------------------
-    // Game settings
-    // -------------------------
-
-    const paddleWidth = 12;
-    const paddleHeight = 100;
+    // =========================================
+    // GAME SETTINGS
+    // =========================================
 
     const winningScore = 5;
 
-    // Different speeds for each mode
-    const modes = {
-      classic: {
-        ballSpeed: 5,
-        aiSpeed: 5
-      },
+    const paddleWidth = 12;
 
-      fast: {
-        ballSpeed: 8,
-        aiSpeed: 8
-      }
+    // Smaller paddles = harder game
+    const paddleHeight = 75;
+
+    const playerSpeed = 11;
+
+    // Very fast AI
+    const aiSpeed = 10;
+
+
+    // =========================================
+    // PLAYER
+    // =========================================
+
+    const player = {
+
+      x: 25,
+
+      y: canvas.height / 2 - paddleHeight / 2,
+
+      width: paddleWidth,
+
+      height: paddleHeight,
+
+      score: 0
     };
 
-    let currentMode = "classic";
+
+    // =========================================
+    // AI
+    // =========================================
+
+    const ai = {
+
+      x: canvas.width - 25 - paddleWidth,
+
+      y: canvas.height / 2 - paddleHeight / 2,
+
+      width: paddleWidth,
+
+      height: paddleHeight,
+
+      score: 0
+    };
+
+
+    // =========================================
+    // BALL
+    // =========================================
+
+    const ball = {
+
+      x: canvas.width / 2,
+
+      y: canvas.height / 2,
+
+      size: 14,
+
+      // Starting speed
+      speedX: 10,
+
+      speedY: 5,
+
+      // Used for the glowing trail
+      trail: []
+    };
+
+
+    // =========================================
+    // GAME STATE
+    // =========================================
 
     let gameOver = false;
 
-
-    // -------------------------
-    // Player
-    // -------------------------
-
-    const player = {
-      x: 20,
-      y: canvas.height / 2 - paddleHeight / 2,
-      width: paddleWidth,
-      height: paddleHeight,
-      speed: 8,
-      score: 0
-    };
+    let rallyCount = 0;
 
 
-    // -------------------------
-    // AI
-    // -------------------------
-
-    const ai = {
-      x: canvas.width - 20 - paddleWidth,
-      y: canvas.height / 2 - paddleHeight / 2,
-      width: paddleWidth,
-      height: paddleHeight,
-      score: 0
-    };
-
-
-    // -------------------------
-    // Ball
-    // -------------------------
-
-    const ball = {
-      x: canvas.width / 2,
-      y: canvas.height / 2,
-      size: 12,
-      speedX: 5,
-      speedY: 3
-    };
-
-
-    // Keyboard controls
+    // Keyboard state
     const keys = {
+
       w: false,
+
       s: false
     };
 
 
-    // -------------------------
-    // Keyboard input
-    // -------------------------
+    // =========================================
+    // KEYBOARD CONTROLS
+    // =========================================
 
     document.addEventListener("keydown", function(event) {
 
       const key = event.key.toLowerCase();
 
+
       if (key === "w") {
         keys.w = true;
       }
+
 
       if (key === "s") {
         keys.s = true;
       }
 
 
-      // Classic Mode
-      if (key === "1") {
-        changeMode("classic");
-      }
-
-
-      // Fast Mode
-      if (key === "2") {
-        changeMode("fast");
-      }
-
-
-      // Restart
+      // Restart game
       if (event.code === "Space") {
 
-        // Prevent the page from scrolling
         event.preventDefault();
 
         if (gameOver) {
+
           restartGame();
+
         }
+
       }
 
     });
@@ -227,9 +267,11 @@
 
       const key = event.key.toLowerCase();
 
+
       if (key === "w") {
         keys.w = false;
       }
+
 
       if (key === "s") {
         keys.s = false;
@@ -238,154 +280,232 @@
     });
 
 
-    // -------------------------
-    // Change game mode
-    // -------------------------
-
-    function changeMode(mode) {
-
-      currentMode = mode;
-
-      if (mode === "classic") {
-        modeElement.textContent = "Mode: Classic";
-      }
-
-      if (mode === "fast") {
-        modeElement.textContent = "Mode: FAST 🔥";
-      }
-
-      // Starting a new game when changing mode
-      restartGame();
-    }
-
-
-    // -------------------------
-    // Move player
-    // -------------------------
+    // =========================================
+    // MOVE PLAYER
+    // =========================================
 
     function movePlayer() {
 
       if (keys.w) {
-        player.y -= player.speed;
+
+        player.y -= playerSpeed;
+
       }
+
 
       if (keys.s) {
-        player.y += player.speed;
+
+        player.y += playerSpeed;
+
       }
 
 
-      // Keep player inside screen
+      // Keep player inside the screen
+
       if (player.y < 0) {
+
         player.y = 0;
+
       }
+
 
       if (player.y + player.height > canvas.height) {
-        player.y = canvas.height - player.height;
+
+        player.y =
+          canvas.height - player.height;
+
       }
 
     }
 
 
-    // -------------------------
-    // Move AI
-    // -------------------------
+    // =========================================
+    // MOVE AI
+    // =========================================
 
     function moveAI() {
 
-      const aiSpeed = modes[currentMode].aiSpeed;
-
-      const paddleCenter = ai.y + ai.height / 2;
+      const paddleCenter =
+        ai.y + ai.height / 2;
 
 
       // AI follows the ball
+
       if (paddleCenter < ball.y) {
+
         ai.y += aiSpeed;
+
       }
 
+
       if (paddleCenter > ball.y) {
+
         ai.y -= aiSpeed;
+
       }
 
 
       // Keep AI inside screen
+
       if (ai.y < 0) {
+
         ai.y = 0;
+
       }
 
+
       if (ai.y + ai.height > canvas.height) {
-        ai.y = canvas.height - ai.height;
+
+        ai.y =
+          canvas.height - ai.height;
+
       }
 
     }
 
 
-    // -------------------------
-    // Move ball
-    // -------------------------
+    // =========================================
+    // MOVE BALL
+    // =========================================
 
     function moveBall() {
 
       ball.x += ball.speedX;
+
       ball.y += ball.speedY;
 
 
-      // Top wall
+      // Save ball position for the trail
+
+      ball.trail.push({
+
+        x: ball.x,
+
+        y: ball.y
+
+      });
+
+
+      // Only keep the last 10 positions
+
+      if (ball.trail.length > 10) {
+
+        ball.trail.shift();
+
+      }
+
+
+      // =====================================
+      // TOP WALL
+      // =====================================
+
       if (ball.y <= 0) {
+
         ball.y = 0;
+
         ball.speedY *= -1;
+
       }
 
 
-      // Bottom wall
+      // =====================================
+      // BOTTOM WALL
+      // =====================================
+
       if (ball.y + ball.size >= canvas.height) {
-        ball.y = canvas.height - ball.size;
+
+        ball.y =
+          canvas.height - ball.size;
+
         ball.speedY *= -1;
+
       }
 
 
-      // -------------------------
-      // Player collision
-      // -------------------------
+      // =====================================
+      // PLAYER COLLISION
+      // =====================================
 
       if (
+
         ball.x <= player.x + player.width &&
+
         ball.x + ball.size >= player.x &&
+
         ball.y + ball.size >= player.y &&
+
         ball.y <= player.y + player.height
+
       ) {
 
-        ball.x = player.x + player.width;
+        ball.x =
+          player.x + player.width;
+
+
+        // Reverse direction
 
         ball.speedX *= -1;
 
-        increaseBallSpeed();
+
+        // Change vertical direction
+        // depending on where the ball hits
+
+        addSpin(player);
+
+
+        // Make the ball faster
+
+        increaseSpeed();
+
+
+        rallyCount++;
 
       }
 
 
-      // -------------------------
-      // AI collision
-      // -------------------------
+      // =====================================
+      // AI COLLISION
+      // =====================================
 
       if (
+
         ball.x + ball.size >= ai.x &&
+
         ball.x <= ai.x + ai.width &&
+
         ball.y + ball.size >= ai.y &&
+
         ball.y <= ai.y + ai.height
+
       ) {
 
-        ball.x = ai.x - ball.size;
+        ball.x =
+          ai.x - ball.size;
+
+
+        // Reverse direction
 
         ball.speedX *= -1;
 
-        increaseBallSpeed();
+
+        // Add spin
+
+        addSpin(ai);
+
+
+        // Increase speed
+
+        increaseSpeed();
+
+
+        rallyCount++;
 
       }
 
 
-      // -------------------------
-      // AI scores
-      // -------------------------
+      // =====================================
+      // AI SCORES
+      // =====================================
 
       if (ball.x < 0) {
 
@@ -395,16 +515,19 @@
 
         checkWinner();
 
+
         if (!gameOver) {
+
           resetBall();
+
         }
 
       }
 
 
-      // -------------------------
-      // Player scores
-      // -------------------------
+      // =====================================
+      // PLAYER SCORES
+      // =====================================
 
       if (ball.x > canvas.width) {
 
@@ -414,8 +537,11 @@
 
         checkWinner();
 
+
         if (!gameOver) {
+
           resetBall();
+
         }
 
       }
@@ -423,72 +549,158 @@
     }
 
 
-    // -------------------------
-    // Make ball faster
-    // -------------------------
+    // =========================================
+    // ADD BALL SPIN
+    // =========================================
 
-    function increaseBallSpeed() {
+    function addSpin(paddle) {
 
-      // Fast mode becomes even faster
-      if (currentMode === "fast") {
+      // Find where the ball hit the paddle
 
-        // Increase horizontal speed slightly
-        if (ball.speedX > 0) {
-          ball.speedX += 0.3;
-        } else {
-          ball.speedX -= 0.3;
-        }
+      const paddleCenter =
+        paddle.y + paddle.height / 2;
 
-        // Increase vertical speed slightly
-        if (ball.speedY > 0) {
-          ball.speedY += 0.15;
-        } else {
-          ball.speedY -= 0.15;
-        }
+      const ballCenter =
+        ball.y + ball.size / 2;
+
+
+      const hitPosition =
+        ballCenter - paddleCenter;
+
+
+      // Convert hit position into a
+      // value between roughly -1 and 1
+
+      const normalizedHit =
+        hitPosition / (paddle.height / 2);
+
+
+      // Add vertical movement based
+      // on where the paddle was hit
+
+      ball.speedY += normalizedHit * 2;
+
+
+      // Prevent the ball from becoming
+      // too vertical
+
+      if (Math.abs(ball.speedY) < 2) {
+
+        ball.speedY =
+          ball.speedY >= 0 ? 2 : -2;
 
       }
 
     }
 
 
-    // -------------------------
-    // Reset ball
-    // -------------------------
+    // =========================================
+    // INCREASE BALL SPEED
+    // =========================================
+
+    function increaseSpeed() {
+
+      // Make the ball faster after every hit
+
+      if (ball.speedX > 0) {
+
+        ball.speedX += 0.45;
+
+      } else {
+
+        ball.speedX -= 0.45;
+
+      }
+
+
+      // Also increase vertical speed
+
+      if (ball.speedY > 0) {
+
+        ball.speedY += 0.08;
+
+      } else {
+
+        ball.speedY -= 0.08;
+
+      }
+
+
+      // Prevent the ball from becoming
+      // completely impossible
+
+      const maxSpeed = 22;
+
+
+      if (Math.abs(ball.speedX) > maxSpeed) {
+
+        ball.speedX =
+          ball.speedX > 0
+            ? maxSpeed
+            : -maxSpeed;
+
+      }
+
+    }
+
+
+    // =========================================
+    // RESET BALL
+    // =========================================
 
     function resetBall() {
 
-      ball.x = canvas.width / 2;
-      ball.y = canvas.height / 2;
+      ball.x =
+        canvas.width / 2;
 
-      const baseSpeed = modes[currentMode].ballSpeed;
+      ball.y =
+        canvas.height / 2;
 
-      // Random direction
-      ball.speedX = Math.random() > 0.5
-        ? baseSpeed
-        : -baseSpeed;
 
-      ball.speedY = Math.random() > 0.5
-        ? baseSpeed * 0.6
-        : -baseSpeed * 0.6;
+      // Reset rally counter
+
+      rallyCount = 0;
+
+
+      // Start fast
+
+      ball.speedX =
+        Math.random() > 0.5
+          ? 10
+          : -10;
+
+
+      ball.speedY =
+        Math.random() > 0.5
+          ? 5
+          : -5;
+
+
+      // Clear trail
+
+      ball.trail = [];
 
     }
 
 
-    // -------------------------
-    // Update score
-    // -------------------------
+    // =========================================
+    // UPDATE SCORE
+    // =========================================
 
     function updateScore() {
 
-      playerScoreElement.textContent = player.score;
-      aiScoreElement.textContent = ai.score;
+      playerScoreElement.textContent =
+        player.score;
+
+      aiScoreElement.textContent =
+        ai.score;
 
     }
 
 
-    // -------------------------
-    // Check winner
-    // -------------------------
+    // =========================================
+    // CHECK WINNER
+    // =========================================
 
     function checkWinner() {
 
@@ -497,7 +709,7 @@
         gameOver = true;
 
         messageElement.textContent =
-          "You Win! Press Space to Restart";
+          "YOU WIN! 🔥 Press Space to Restart";
 
       }
 
@@ -507,31 +719,38 @@
         gameOver = true;
 
         messageElement.textContent =
-          "You Lose! Press Space to Restart";
+          "YOU LOSE 💀 Press Space to Restart";
 
       }
 
     }
 
 
-    // -------------------------
-    // Restart game
-    // -------------------------
+    // =========================================
+    // RESTART
+    // =========================================
 
     function restartGame() {
 
       player.score = 0;
+
       ai.score = 0;
 
+
       player.y =
-        canvas.height / 2 - paddleHeight / 2;
+        canvas.height / 2 -
+        paddleHeight / 2;
+
 
       ai.y =
-        canvas.height / 2 - paddleHeight / 2;
+        canvas.height / 2 -
+        paddleHeight / 2;
+
 
       gameOver = false;
 
       messageElement.textContent = "";
+
 
       updateScore();
 
@@ -540,14 +759,16 @@
     }
 
 
-    // -------------------------
-    // Draw game
-    // -------------------------
+    // =========================================
+    // DRAW GAME
+    // =========================================
 
     function draw() {
 
       // Clear screen
+
       ctx.fillStyle = "#000";
+
       ctx.fillRect(
         0,
         0,
@@ -556,10 +777,13 @@
       );
 
 
-      // Center line
-      ctx.setLineDash([10, 10]);
+      // =====================================
+      // CENTER LINE
+      // =====================================
 
-      ctx.strokeStyle = "#555";
+      ctx.strokeStyle = "#333";
+
+      ctx.setLineDash([10, 10]);
 
       ctx.beginPath();
 
@@ -578,40 +802,112 @@
       ctx.setLineDash([]);
 
 
-      // Draw player
-      ctx.fillStyle = "#fff";
+      // =====================================
+      // BALL TRAIL
+      // =====================================
+
+      for (let i = 0; i < ball.trail.length; i++) {
+
+        const position =
+          ball.trail[i];
+
+
+        // Older trail positions are
+        // more transparent
+
+        const alpha =
+          i / ball.trail.length;
+
+
+        ctx.fillStyle =
+          `rgba(255, 255, 255, ${alpha * 0.4})`;
+
+
+        ctx.fillRect(
+
+          position.x,
+
+          position.y,
+
+          ball.size,
+
+          ball.size
+
+        );
+
+      }
+
+
+      // =====================================
+      // BALL GLOW
+      // =====================================
+
+      ctx.shadowBlur = 20;
+
+      ctx.shadowColor = "white";
+
+      ctx.fillStyle = "white";
+
 
       ctx.fillRect(
-        player.x,
-        player.y,
-        player.width,
-        player.height
-      );
 
-
-      // Draw AI
-      ctx.fillRect(
-        ai.x,
-        ai.y,
-        ai.width,
-        ai.height
-      );
-
-
-      // Draw ball
-      ctx.fillRect(
         ball.x,
+
         ball.y,
+
         ball.size,
+
         ball.size
+
+      );
+
+
+      // Turn off glow
+
+      ctx.shadowBlur = 0;
+
+
+      // =====================================
+      // PLAYER PADDLE
+      // =====================================
+
+      ctx.fillStyle = "white";
+
+      ctx.fillRect(
+
+        player.x,
+
+        player.y,
+
+        player.width,
+
+        player.height
+
+      );
+
+
+      // =====================================
+      // AI PADDLE
+      // =====================================
+
+      ctx.fillRect(
+
+        ai.x,
+
+        ai.y,
+
+        ai.width,
+
+        ai.height
+
       );
 
     }
 
 
-    // -------------------------
-    // Main game loop
-    // -------------------------
+    // =========================================
+    // MAIN GAME LOOP
+    // =========================================
 
     function gameLoop() {
 
@@ -625,14 +921,19 @@
 
       }
 
+
       draw();
+
 
       requestAnimationFrame(gameLoop);
 
     }
 
 
-    // Start game
+    // =========================================
+    // START GAME
+    // =========================================
+
     updateScore();
 
     resetBall();
