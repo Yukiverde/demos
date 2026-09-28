@@ -14,14 +14,11 @@
     body {
       margin: 0;
       background: #000;
-      color: #fff;
+      color: white;
       font-family: Arial, sans-serif;
-
-      /* Center the game */
       display: flex;
       justify-content: center;
       align-items: center;
-
       min-height: 100vh;
     }
 
@@ -32,22 +29,21 @@
     }
 
     h1 {
-      margin-bottom: 10px;
-      font-size: 28px;
+      margin-bottom: 8px;
     }
 
     .instructions {
-      margin-bottom: 15px;
       color: #aaa;
       font-size: 14px;
+      margin-bottom: 15px;
     }
 
     canvas {
       width: 100%;
       height: auto;
-      background: #000;
-      border: 2px solid #fff;
       display: block;
+      background: black;
+      border: 2px solid white;
     }
 
     .score {
@@ -57,9 +53,14 @@
       margin-top: 15px;
     }
 
+    #mode {
+      margin-top: 10px;
+      color: #aaa;
+    }
+
     #message {
       margin-top: 15px;
-      font-size: 24px;
+      font-size: 22px;
       font-weight: bold;
     }
   </style>
@@ -68,10 +69,14 @@
 <body>
 
   <div class="game-container">
+
     <h1>Classic Pong</h1>
 
     <div class="instructions">
-      W / S = Move Paddle &nbsp; | &nbsp; Space = Restart
+      W / S = Move &nbsp; | &nbsp;
+      1 = Classic Mode &nbsp; | &nbsp;
+      2 = Fast Mode &nbsp; | &nbsp;
+      Space = Restart
     </div>
 
     <canvas id="gameCanvas" width="900" height="500"></canvas>
@@ -81,19 +86,24 @@
       <span id="aiScore">0</span>
     </div>
 
+    <div id="mode">Mode: Classic</div>
+
     <div id="message"></div>
+
   </div>
 
 
   <script>
-    // Get the canvas and its drawing tools
+
+    // Get the canvas
     const canvas = document.getElementById("gameCanvas");
     const ctx = canvas.getContext("2d");
 
-    // Get the score and message elements
+    // Get HTML elements
     const playerScoreElement = document.getElementById("playerScore");
     const aiScoreElement = document.getElementById("aiScore");
     const messageElement = document.getElementById("message");
+    const modeElement = document.getElementById("mode");
 
 
     // -------------------------
@@ -103,14 +113,28 @@
     const paddleWidth = 12;
     const paddleHeight = 100;
 
-    const playerSpeed = 7;
-    const aiSpeed = 5;
-
     const winningScore = 5;
+
+    // Different speeds for each mode
+    const modes = {
+      classic: {
+        ballSpeed: 5,
+        aiSpeed: 5
+      },
+
+      fast: {
+        ballSpeed: 8,
+        aiSpeed: 8
+      }
+    };
+
+    let currentMode = "classic";
+
+    let gameOver = false;
 
 
     // -------------------------
-    // Player and AI
+    // Player
     // -------------------------
 
     const player = {
@@ -118,8 +142,14 @@
       y: canvas.height / 2 - paddleHeight / 2,
       width: paddleWidth,
       height: paddleHeight,
+      speed: 8,
       score: 0
     };
+
+
+    // -------------------------
+    // AI
+    // -------------------------
 
     const ai = {
       x: canvas.width - 20 - paddleWidth,
@@ -143,63 +173,108 @@
     };
 
 
-    // Keep track of keyboard input
+    // Keyboard controls
     const keys = {
       w: false,
       s: false
     };
 
-    let gameOver = false;
-
 
     // -------------------------
-    // Keyboard controls
+    // Keyboard input
     // -------------------------
 
     document.addEventListener("keydown", function(event) {
 
-      if (event.key.toLowerCase() === "w") {
+      const key = event.key.toLowerCase();
+
+      if (key === "w") {
         keys.w = true;
       }
 
-      if (event.key.toLowerCase() === "s") {
+      if (key === "s") {
         keys.s = true;
       }
 
-      // Press Space to restart
-      if (event.code === "Space" && gameOver) {
-        restartGame();
+
+      // Classic Mode
+      if (key === "1") {
+        changeMode("classic");
       }
+
+
+      // Fast Mode
+      if (key === "2") {
+        changeMode("fast");
+      }
+
+
+      // Restart
+      if (event.code === "Space") {
+
+        // Prevent the page from scrolling
+        event.preventDefault();
+
+        if (gameOver) {
+          restartGame();
+        }
+      }
+
     });
 
 
     document.addEventListener("keyup", function(event) {
 
-      if (event.key.toLowerCase() === "w") {
+      const key = event.key.toLowerCase();
+
+      if (key === "w") {
         keys.w = false;
       }
 
-      if (event.key.toLowerCase() === "s") {
+      if (key === "s") {
         keys.s = false;
       }
+
     });
 
 
     // -------------------------
-    // Move the player
+    // Change game mode
+    // -------------------------
+
+    function changeMode(mode) {
+
+      currentMode = mode;
+
+      if (mode === "classic") {
+        modeElement.textContent = "Mode: Classic";
+      }
+
+      if (mode === "fast") {
+        modeElement.textContent = "Mode: FAST 🔥";
+      }
+
+      // Starting a new game when changing mode
+      restartGame();
+    }
+
+
+    // -------------------------
+    // Move player
     // -------------------------
 
     function movePlayer() {
 
       if (keys.w) {
-        player.y -= playerSpeed;
+        player.y -= player.speed;
       }
 
       if (keys.s) {
-        player.y += playerSpeed;
+        player.y += player.speed;
       }
 
-      // Stop the paddle from leaving the screen
+
+      // Keep player inside screen
       if (player.y < 0) {
         player.y = 0;
       }
@@ -207,18 +282,22 @@
       if (player.y + player.height > canvas.height) {
         player.y = canvas.height - player.height;
       }
+
     }
 
 
     // -------------------------
-    // Move the AI
+    // Move AI
     // -------------------------
 
     function moveAI() {
 
-      // The AI simply follows the ball
+      const aiSpeed = modes[currentMode].aiSpeed;
+
       const paddleCenter = ai.y + ai.height / 2;
 
+
+      // AI follows the ball
       if (paddleCenter < ball.y) {
         ai.y += aiSpeed;
       }
@@ -227,7 +306,8 @@
         ai.y -= aiSpeed;
       }
 
-      // Keep AI inside the screen
+
+      // Keep AI inside screen
       if (ai.y < 0) {
         ai.y = 0;
       }
@@ -235,11 +315,12 @@
       if (ai.y + ai.height > canvas.height) {
         ai.y = canvas.height - ai.height;
       }
+
     }
 
 
     // -------------------------
-    // Move the ball
+    // Move ball
     // -------------------------
 
     function moveBall() {
@@ -248,47 +329,68 @@
       ball.y += ball.speedY;
 
 
-      // Bounce off the top wall
+      // Top wall
       if (ball.y <= 0) {
         ball.y = 0;
         ball.speedY *= -1;
       }
 
 
-      // Bounce off the bottom wall
+      // Bottom wall
       if (ball.y + ball.size >= canvas.height) {
         ball.y = canvas.height - ball.size;
         ball.speedY *= -1;
       }
 
 
-      // Check collision with player paddle
+      // -------------------------
+      // Player collision
+      // -------------------------
+
       if (
         ball.x <= player.x + player.width &&
         ball.x + ball.size >= player.x &&
         ball.y + ball.size >= player.y &&
         ball.y <= player.y + player.height
       ) {
+
         ball.x = player.x + player.width;
+
         ball.speedX *= -1;
+
+        increaseBallSpeed();
+
       }
 
 
-      // Check collision with AI paddle
+      // -------------------------
+      // AI collision
+      // -------------------------
+
       if (
         ball.x + ball.size >= ai.x &&
         ball.x <= ai.x + ai.width &&
         ball.y + ball.size >= ai.y &&
         ball.y <= ai.y + ai.height
       ) {
+
         ball.x = ai.x - ball.size;
+
         ball.speedX *= -1;
+
+        increaseBallSpeed();
+
       }
 
 
-      // Ball goes past the left side
+      // -------------------------
+      // AI scores
+      // -------------------------
+
       if (ball.x < 0) {
+
         ai.score++;
+
         updateScore();
 
         checkWinner();
@@ -296,12 +398,18 @@
         if (!gameOver) {
           resetBall();
         }
+
       }
 
 
-      // Ball goes past the right side
+      // -------------------------
+      // Player scores
+      // -------------------------
+
       if (ball.x > canvas.width) {
+
         player.score++;
+
         updateScore();
 
         checkWinner();
@@ -309,12 +417,42 @@
         if (!gameOver) {
           resetBall();
         }
+
       }
+
     }
 
 
     // -------------------------
-    // Reset the ball
+    // Make ball faster
+    // -------------------------
+
+    function increaseBallSpeed() {
+
+      // Fast mode becomes even faster
+      if (currentMode === "fast") {
+
+        // Increase horizontal speed slightly
+        if (ball.speedX > 0) {
+          ball.speedX += 0.3;
+        } else {
+          ball.speedX -= 0.3;
+        }
+
+        // Increase vertical speed slightly
+        if (ball.speedY > 0) {
+          ball.speedY += 0.15;
+        } else {
+          ball.speedY -= 0.15;
+        }
+
+      }
+
+    }
+
+
+    // -------------------------
+    // Reset ball
     // -------------------------
 
     function resetBall() {
@@ -322,43 +460,62 @@
       ball.x = canvas.width / 2;
       ball.y = canvas.height / 2;
 
-      // Randomly choose the ball's direction
-      ball.speedX = Math.random() > 0.5 ? 5 : -5;
-      ball.speedY = Math.random() > 0.5 ? 3 : -3;
+      const baseSpeed = modes[currentMode].ballSpeed;
+
+      // Random direction
+      ball.speedX = Math.random() > 0.5
+        ? baseSpeed
+        : -baseSpeed;
+
+      ball.speedY = Math.random() > 0.5
+        ? baseSpeed * 0.6
+        : -baseSpeed * 0.6;
+
     }
 
 
     // -------------------------
-    // Update the score
+    // Update score
     // -------------------------
 
     function updateScore() {
 
       playerScoreElement.textContent = player.score;
       aiScoreElement.textContent = ai.score;
+
     }
 
 
     // -------------------------
-    // Check for a winner
+    // Check winner
     // -------------------------
 
     function checkWinner() {
 
       if (player.score >= winningScore) {
+
         gameOver = true;
-        messageElement.textContent = "You Win! Press Space to Restart";
+
+        messageElement.textContent =
+          "You Win! Press Space to Restart";
+
       }
 
+
       if (ai.score >= winningScore) {
+
         gameOver = true;
-        messageElement.textContent = "You Lose! Press Space to Restart";
+
+        messageElement.textContent =
+          "You Lose! Press Space to Restart";
+
       }
+
     }
 
 
     // -------------------------
-    // Restart the game
+    // Restart game
     // -------------------------
 
     function restartGame() {
@@ -366,41 +523,64 @@
       player.score = 0;
       ai.score = 0;
 
-      player.y = canvas.height / 2 - paddleHeight / 2;
-      ai.y = canvas.height / 2 - paddleHeight / 2;
+      player.y =
+        canvas.height / 2 - paddleHeight / 2;
+
+      ai.y =
+        canvas.height / 2 - paddleHeight / 2;
 
       gameOver = false;
 
       messageElement.textContent = "";
 
       updateScore();
+
       resetBall();
+
     }
 
 
     // -------------------------
-    // Draw everything
+    // Draw game
     // -------------------------
 
     function draw() {
 
-      // Clear the screen
+      // Clear screen
       ctx.fillStyle = "#000";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillRect(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+      );
 
 
-      // Draw the center line
+      // Center line
       ctx.setLineDash([10, 10]);
+
       ctx.strokeStyle = "#555";
+
       ctx.beginPath();
-      ctx.moveTo(canvas.width / 2, 0);
-      ctx.lineTo(canvas.width / 2, canvas.height);
+
+      ctx.moveTo(
+        canvas.width / 2,
+        0
+      );
+
+      ctx.lineTo(
+        canvas.width / 2,
+        canvas.height
+      );
+
       ctx.stroke();
+
       ctx.setLineDash([]);
 
 
-      // Draw player paddle
+      // Draw player
       ctx.fillStyle = "#fff";
+
       ctx.fillRect(
         player.x,
         player.y,
@@ -409,7 +589,7 @@
       );
 
 
-      // Draw AI paddle
+      // Draw AI
       ctx.fillRect(
         ai.x,
         ai.y,
@@ -425,6 +605,7 @@
         ball.size,
         ball.size
       );
+
     }
 
 
@@ -435,20 +616,27 @@
     function gameLoop() {
 
       if (!gameOver) {
+
         movePlayer();
+
         moveAI();
+
         moveBall();
+
       }
 
       draw();
 
-      // Run the game again
       requestAnimationFrame(gameLoop);
+
     }
 
 
-    // Start the game
+    // Start game
     updateScore();
+
+    resetBall();
+
     gameLoop();
 
   </script>
